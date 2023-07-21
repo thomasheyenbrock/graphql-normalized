@@ -1,0 +1,42 @@
+{
+  "name": "graphql-normalized",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "pnpm build:src && pnpm build:spec",
+    "build:src": "tsup",
+    "build:spec": "spec-md './spec/Normalized GraphQL Documents.md' > spec/dist/index.html",
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "graphql": "^16.0.0",
+    "prettier": "^3.0.0",
+    "spec-md": "^3.1.0",
+    "tsup": "^7.1.0",
+    "typescript": "^5.1.6",
+    "vitest": "^0.33.0"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0"
+  },
+  "prettier": {
+    "proseWrap": "always"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "splitting": false,
+    "sourcemap": true,
+    "clean": true,
+    "dts": true,
+    "format": [
+      "esm",
+      "cjs"
+    ]
+  }
+}
