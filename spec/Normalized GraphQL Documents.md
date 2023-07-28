@@ -69,38 +69,88 @@ considered normalized if any only if it adheres to all these rules.
 
 ### Printing Normalized GraphQL Documents
 
-When parsing a text that represents a normalized GraphQL document, then there
-must not exist any
-[ignored tokens](https://spec.graphql.org/October2021/#sec-Language.Source-Text.Ignored-Tokens)
-other than those that are necessary to preserve the semantic meaning of the
-document in text form. If an
-[ignored token](https://spec.graphql.org/October2021/#sec-Language.Source-Text.Ignored-Tokens)
-is necessary for this purpose, a single space character (U+0020) must be used.
+The stringified display of normalized GraphQL documents optimizes for string
+length as a primary goal and legibility as secondary goal. The string must use
+UTF-8 for encoding.
 
-Given the
-[language specification](https://spec.graphql.org/October2021/#sec-Language) of
-the latest version of the GraphQL specification, this concretely means that only
-the following sets of adjacent tokens must be separated by a single space
-character:
+#### Minimize ignored tokens
 
-- Two _[Name](https://spec.graphql.org/October2021/#Name)_ tokens
-- Two _[IntValue](https://spec.graphql.org/October2021/#IntValue)_ tokens where
-  the latter does not start with a
-  _[NegativeSign](https://spec.graphql.org/October2021/#NegativeSign)_
-- Two _[FloatValue](https://spec.graphql.org/October2021/#FloatValue)_ tokens
-  where the latter does not start with a
-  _[NegativeSign](https://spec.graphql.org/October2021/#NegativeSign)_
-- An _[IntValue](https://spec.graphql.org/October2021/#IntValue)_ token followed
-  by a _[FloatValue](https://spec.graphql.org/October2021/#FloatValue)_ token
-  that does not start with a
-  _[NegativeSign](https://spec.graphql.org/October2021/#NegativeSign)_
-- A _[FloatValue](https://spec.graphql.org/October2021/#FloatValue)_ token
-  followed by an _[IntValue](https://spec.graphql.org/October2021/#IntValue)_
-  token that does not start with a
-  _[NegativeSign](https://spec.graphql.org/October2021/#NegativeSign)_
+To meet the primary goal of small length, a normalized GraphQL document in
+stringified form must not contain excessive
+[ignored tokens](https://spec.graphql.org/October2021/#sec-Language.Source-Text.Ignored-Tokens).
+The only non-excessive ignored token is a single space character (U+0020) that
+must be inserted between two tokens for which {ShouldSeparateWithSpace} returns
+**true**.
 
-All other sets of adjacent tokens must not be separated by any
-[ignored token](https://spec.graphql.org/October2021/#sec-Language.Source-Text.Ignored-Tokens).
+ShouldSeparateWithSpace(firstToken, secondToken) :
+
+1. If {secondToken} is of the kind
+   _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_ and equals
+   the tripple-dot (**...**):
+   - If {firstToken} is a
+     [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
+     kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
+     - Return **true**.
+   - Return **false**.
+2. If {firstToken} is a
+   [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
+   kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
+   - If {secondToken} is a
+     [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
+     kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
+     - Return **true**.
+3. Return **false**.
+
+Note: The definition of {ShouldSeparateWithSpace} intentionally adds ignored
+tokens in _some_ places where they would not strictly be necessary in order to
+produce a string that can be parsed as GraphQL document. This is to satisfy the
+secondary goal of legibility.
+
+**Example**
+
+Consider the following document string that contains excessive ingored tokens.
+
+```graphql example
+{
+  add(numbers: [1, -2]) {
+    __typename
+    ... on Success {
+      result
+    }
+    ... on Error {
+      message
+      code
+    }
+  }
+}
+```
+
+The string correctly representing the normalized GraphQL document looks like
+this.
+
+```example
+{add(numbers:[1 -2]){__typename ...on Success{result}...on Error{message code}}}
+```
+
+There are two space tokens in this string which are not strictly necessary to
+preserve the ability of the string to be parsed as GraphQL document:
+
+- The space between `1` and `-2` in the integer array
+- The space between `__typename` and the tripple-dot punctuator `...`
+
+In other words, the following string contains the actually minimal amount of
+ignored tokens and would parse to the same GraphQL document like the one above.
+
+```counter-example
+{add(numbers:[1-2]){__typename...on Success{result}...on Error{message code}}}
+```
+
+The second string suffers significantly in terms of legibility. For a human, the
+token `1-2` might not be understood as two separate integers. Similarly, having
+the tripple-dot punctuator join two
+_[Name](https://spec.graphql.org/October2021/#Name)_ tokens might be considered
+ambiguous or might be perceived as a single
+_[Name](https://spec.graphql.org/October2021/#Name)_ token.
 
 ## Executable Documents
 
@@ -109,10 +159,12 @@ _[ExecutableDocuments](https://spec.graphql.org/October2021/#ExecutableDocument)
 Each rule provides a non-normalized GraphQL document as counter-example and
 shows the normalized version of that document.
 
-Note: Normalized GraphQL documents in textual representation must not contain
-any ignored tokens, however, to increase legibility all these examples use a
-"prettified" textual representation that adds whitespace, line terminators, and
-commatas.
+Note: Like described in the section about
+[Printing Normalized GraphQL Documents](#sec-Printing-Normalized-GraphQL-Documents),
+normalized GraphQL documents in textual representation must not contain
+excessive ignored tokens. However, to increase legibility, the examples of this
+section use a "prettified" textual representation that may add ignored tokens
+such as whitespace, line terminators, and commatas.
 
 This specification only applies to _executable documents_ that would produce no
 [validation](https://spec.graphql.org/October2021/#sec-Validation) errors in the
