@@ -152,6 +152,47 @@ _[Name](https://spec.graphql.org/October2021/#Name)_ tokens might be considered
 ambiguous or might be perceived as a single
 _[Name](https://spec.graphql.org/October2021/#Name)_ token.
 
+#### Printing strings
+
+There are two ways of representing a
+_[StringValue](https://spec.graphql.org/October2021/#StringValue)_ in GraphQL:
+Wrapping the string with two single-quotation-marks, and wrapping the string
+with two tripple-quotation-marks. The latter are known as
+_[block strings](https://spec.graphql.org/October2021/#sec-String-Value.Block-Strings)_.
+We will refer to the former as _regular strings_.
+
+When displaying a normalized GraphQL document in stringified form, all
+_[StringValue](https://spec.graphql.org/October2021/#StringValue)_ tokens must
+be printed as regular strings.
+
+Note: The reason for using regular strings over block strings is to meet the
+primary goal of minimized overall string length. A block string requires four
+additional quotation marks. Line breaks could be inserted more efficiently using
+block strings (using U+000A as single character), however this conflicts with
+the secondary goal of legibility (see below).
+
+The following control characters must be printed using their escape sequence:
+
+- U+0008 must be printed as `\b`
+- U+0009 must be printed as `\t`
+- U+000A must be printed as `\n`
+- U+000C must be printed as `\f`
+- U+000D must be printed as `\r`
+
+All control characters other than the five mentioned above must be printed using
+their escaped unicode sequence. This includes:
+
+- All characters from U+0000 up to and including U+0007
+- The character U+000B
+- All characters from U+000E up to and including U+001F
+- All characters from U+007F up to and including U+009F
+
+The quote character U+0022 must be printed with a leading backslash (`\"`).
+
+The backslash character U+005C must be printed with a leading backslash (`\\`).
+
+All other characters must be printed using their unicode character.
+
 ## Executable Documents
 
 This section contains normalization rules specifically for
@@ -737,5 +778,3 @@ _[ObjectField](https://spec.graphql.org/October2021/#ObjectField)_ name.
 ## Type System Documents
 
 TODO: basically also just sort things
-
-TODO: string values (block string vs regular strings, different encodings)
