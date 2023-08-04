@@ -584,17 +584,17 @@ A normalized GraphQL document must not contain any lists of adjacent and
 exhaustive
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_ inside
 of a selection set of a field that returns an
-_[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_ where all of
-the following conditions hold:
+_[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_ where
+all of the following conditions hold:
 
 - Either all the first fields or all the last fields inside each of the
   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_ are
   equal.
 - The field identified by the previous condition is defined on the given
-  _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_
+  _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_
 - All _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
   do not have any
-  _[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+  _[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
   applied to them.
 
 Instead, such a field identified by the above conditions should only be
@@ -606,8 +606,8 @@ list of adjacent and exhaustive
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_.
 
 Given a selection set for a field that returns an
-_[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_ {interface}
-and a list of adjacent
+_[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_
+{interface} and a list of adjacent
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
 {fragments} inside this selection set, the list {fragments} is considered
 _exhaustive_ if {FragmentsAreExhaustive(fragments, interface)} returns **true**.
@@ -624,10 +624,10 @@ FragmentsAreExhaustive(fragments, interface) :
      - Continue to the next fragment.
    - Let {type} be the name of the type from {typeCondition}.
    - If {type} is an
-     _[object type](https://spec.graphql.org/draft/#sec-Objects)_:
+     _[object type](https://spec.graphql.org/October2021/#sec-Objects)_:
      - Add {type} to {fragmentTypes}.
    - If {type} is an
-     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_:
+     _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_:
      - Let {implementors} be the result of {Implementors(type)}.
      - Add all set items of {implementors} to {fragmentTypes}.
 1. Let {interfaceImplementors} be the result of {Implementors(interfaceType)}.
@@ -639,11 +639,11 @@ FragmentsAreExhaustive(fragments, interface) :
 Implementors(interfaceType) :
 
 1. Let {objectImplementors} be the set of
-   _[object types](https://spec.graphql.org/draft/#sec-Objects)_ that implement
-   the interface type {interfaceType}.
-1. Let {interfaceImplementors} be the set of
-   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_ that
+   _[object types](https://spec.graphql.org/October2021/#sec-Objects)_ that
    implement the interface type {interfaceType}.
+1. Let {interfaceImplementors} be the set of
+   _[interface types](https://spec.graphql.org/October2021/#sec-Interfaces)_
+   that implement the interface type {interfaceType}.
 1. For each {interface} in {interfaceImplementors}:
    - Let {objects} be the result of calling {Implementors(interface)}.
    - Add all entries of the set {objects} to the set {objectImplementors}.
@@ -913,14 +913,14 @@ _[ObjectField](https://spec.graphql.org/October2021/#ObjectField)_ name.
 In order to be normalized, any two adjacent
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ in a
 GraphQL document that are non-overlapping and that don't have any
-_[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+_[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
 applied must be ordered alphabetically by the type name of their
 _[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_. Two
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ are
 considered non-overlapping if {InlineFragmentsOverlap} returns **false**.
 
 Note: This specification assumes that any
-_[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+_[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
 may influence the execution of the given document. Hence, this rule is
 formulated defensively and explicitly excludes inline fragments annotated with a
 custom directive.
@@ -942,50 +942,50 @@ InlineFragmentsOverlap(inlineFragmentA, inlineFragmentB) :
 TypesOverlap(typeA, typeB) :
 
 1. If both {typeA} and {typeB} are
-   _[object types](https://spec.graphql.org/draft/#sec-Objects)_:
+   _[object types](https://spec.graphql.org/October2021/#sec-Objects)_:
    - Return **true** if {typeA} is equal to {typeB}, otherwise return **false**.
 1. If both {typeA} and {typeB} are
-   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_:
+   _[interface types](https://spec.graphql.org/October2021/#sec-Interfaces)_:
    - Let {implementorsA} be the result of {Implementors(typeA)}, and let
      {implementorsB} be the result of {Implementors(typeB)}.
    - Return **true** if the intersection of the sets {implementorsA} and
      {implementorsB} is not an empty set, otherwise return **false**.
 1. If both {typeA} and {typeB} are
-   _[union types](https://spec.graphql.org/draft/#sec-Unions)_:
+   _[union types](https://spec.graphql.org/October2021/#sec-Unions)_:
    - Let {memberTypesA} be the set of union member types of {typeA}, and let
      {memberTypesB} be the set of union member types of {typeB}.
    - Return **true** if the intersection of the sets {memberTypesA} and
      {memberTypesB} is not an empty set, otherwise return **false**.
 1. If one of {typeA} and {typeB} is an
-   _[object type](https://spec.graphql.org/draft/#sec-Objects)_, and one of
-   {typeA} and {typeB} is an
-   _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_:
+   _[object type](https://spec.graphql.org/October2021/#sec-Objects)_, and one
+   of {typeA} and {typeB} is an
+   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_:
    - Let {objectType} be the one type of {typeA} and {typeB} that is an
-     _[object type](https://spec.graphql.org/draft/#sec-Objects)_.
+     _[object type](https://spec.graphql.org/October2021/#sec-Objects)_.
    - Let {interfaceType} be the one type of {typeA} and {typeB} that is an
-     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_.
+     _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
    - Let {implementors} be the result of calling {Implementors(interfaceType)}.
    - Return **true** if {implementors} contains {objectType}, otherwise return
      **false**.
 1. If one of {typeA} and {typeB} is an
-   _[object type](https://spec.graphql.org/draft/#sec-Objects)_, and one of
-   {typeA} and {typeB} is a
-   _[union type](https://spec.graphql.org/draft/#sec-Unions)_:
+   _[object type](https://spec.graphql.org/October2021/#sec-Objects)_, and one
+   of {typeA} and {typeB} is a
+   _[union type](https://spec.graphql.org/October2021/#sec-Unions)_:
    - Let {objectType} be the one type of {typeA} and {typeB} that is an
-     _[object type](https://spec.graphql.org/draft/#sec-Objects)_.
+     _[object type](https://spec.graphql.org/October2021/#sec-Objects)_.
    - Let {unionType} be the one type of {typeA} and {typeB} that is an
-     _[union type](https://spec.graphql.org/draft/#sec-Unions)_.
+     _[union type](https://spec.graphql.org/October2021/#sec-Unions)_.
    - Let {memberTypes} be the set of union member types of {unionType}.
    - Return **true** if {memberTypes} contains {objectType}, otherwise return
      **false**.
 1. If one of {typeA} and {typeB} is an
-   _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_, and one
-   of {typeA} and {typeB} is a
-   _[union type](https://spec.graphql.org/draft/#sec-Unions)_:
+   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, and
+   one of {typeA} and {typeB} is a
+   _[union type](https://spec.graphql.org/October2021/#sec-Unions)_:
    - Let {interfaceType} be the one type of {typeA} and {typeB} that is an
-     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_.
+     _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
    - Let {unionType} be the one type of {typeA} and {typeB} that is an
-     _[union type](https://spec.graphql.org/draft/#sec-Unions)_.
+     _[union type](https://spec.graphql.org/October2021/#sec-Unions)_.
    - Let {implementors} be the result of {Implementors(interfaceType)}.
    - Let {memberTypes} be the set of union member types of {unionType}.
    - Return **true** if the intersection of the sets {implementors} and
@@ -1061,10 +1061,12 @@ two member types `User` and `Error`.
 }
 ```
 
-Note: Since only _[object types](https://spec.graphql.org/draft/#sec-Objects)_
-are valid union member types, two fragments with different type conditions
-inside a selection set for a
-_[union type](https://spec.graphql.org/draft/#sec-Unions)_ can never overlap.
+Note: Since only
+_[object types](https://spec.graphql.org/October2021/#sec-Objects)_ are valid
+union member types, two fragments with different type conditions inside a
+selection set for a
+_[union type](https://spec.graphql.org/October2021/#sec-Unions)_ can never
+overlap.
 
 **Example for Nested Interface Types**
 
