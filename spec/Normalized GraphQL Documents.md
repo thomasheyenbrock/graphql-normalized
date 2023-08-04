@@ -1,5 +1,18 @@
 # Normalized GraphQL Documents
 
+**State of this document**
+
+This specification shall be considered a working draft. The authors of this
+document reserve the right to make changes of any kind without notice. This
+includes changes that are not backward compattible.
+
+In the future, there will exists ratified versions of this specification. Each
+version will be immutable and won't receive any further changes.
+
+Changes between versions may not always be backwards compatible. However, it is
+the intent of the authors of this specification to minimize the amount of
+changes that are not backward compatible.
+
 **Introduction**
 
 GraphQL as a language is intentionally designed to give maximum flexibility to
