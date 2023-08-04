@@ -48,6 +48,89 @@ const schema = buildSchema(/* GraphQL */ `
   directive @custom on INLINE_FRAGMENT
 `);
 
+describe("Normalized Printing", () => {
+  test("separates non-puncuator tokens with a space", () => {
+    const source = /* GraphQL */ `
+      {
+        kitchenSink(
+          ints: [1, -2, 3]
+          floats: [1.23, -4.56, 7.89]
+          booleans: [true, false]
+          strings: ["hello", "world"]
+        ) {
+          hello
+          world
+        }
+      }
+    `;
+    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
+      '"{kitchenSink(ints:[1 -2 3]floats:[1.23 -4.56 7.89]booleans:[true false]strings:[\\"hello\\" \\"world\\"]){hello world}}"',
+    );
+  });
+
+  test("separates spread token after a non-punctuator token with a space", () => {
+    const source = /* GraphQL */ `
+      {
+        greet
+        ... @custom {
+          kitchenSink {
+            hello
+          }
+        }
+      }
+    `;
+    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
+      '"{greet ...@custom{kitchenSink{hello}}}"',
+    );
+  });
+
+  test("does not separate spread token after a punctuator token", () => {
+    const source = /* GraphQL */ `
+      {
+        ... @custom {
+          kitchenSink {
+            hello
+          }
+        }
+      }
+    `;
+    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
+      '"{...@custom{kitchenSink{hello}}}"',
+    );
+  });
+
+  test("prints all strings as regular strings", () => {
+    const source = /* GraphQL */ `
+      {
+        kitchenSink(
+          strings: [
+            "hello"
+            """
+            world
+            and me
+            """
+          ]
+        )
+      }
+    `;
+    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
+      '"{kitchenSink(strings:[\\"hello\\" \\"world\\\\nand me\\"])}"',
+    );
+  });
+
+  test("prints excaped unicode characters", () => {
+    // prettier-ignore
+    const source = /* GraphQL */ `
+      {
+        kitchenSink(strings: ["\uD83D\uDCA9\u2764\u{1F4A9}"])
+      }
+    `;
+    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
+      '"{kitchenSink(strings:[\\"💩❤💩\\"])}"',
+    );
+  });
+});
+
 test("No Redundant Field Alias", () => {
   const source = /* GraphQL */ `
     {
@@ -669,86 +752,3 @@ test.skip("Ordered Variable Definitions", () => {});
 test.skip("Ordered Arguments", () => {});
 
 test.skip("Ordered Input Object Values", () => {});
-
-describe("Normalized Printing", () => {
-  test("separates non-puncuator tokens with a space", () => {
-    const source = /* GraphQL */ `
-      {
-        kitchenSink(
-          ints: [1, -2, 3]
-          floats: [1.23, -4.56, 7.89]
-          booleans: [true, false]
-          strings: ["hello", "world"]
-        ) {
-          hello
-          world
-        }
-      }
-    `;
-    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
-      '"{kitchenSink(ints:[1 -2 3]floats:[1.23 -4.56 7.89]booleans:[true false]strings:[\\"hello\\" \\"world\\"]){hello world}}"',
-    );
-  });
-
-  test("separates spread token after a non-punctuator token with a space", () => {
-    const source = /* GraphQL */ `
-      {
-        greet
-        ... @custom {
-          kitchenSink {
-            hello
-          }
-        }
-      }
-    `;
-    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
-      '"{greet ...@custom{kitchenSink{hello}}}"',
-    );
-  });
-
-  test("does not separate spread token after a punctuator token", () => {
-    const source = /* GraphQL */ `
-      {
-        ... @custom {
-          kitchenSink {
-            hello
-          }
-        }
-      }
-    `;
-    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
-      '"{...@custom{kitchenSink{hello}}}"',
-    );
-  });
-
-  test("prints all strings as regular strings", () => {
-    const source = /* GraphQL */ `
-      {
-        kitchenSink(
-          strings: [
-            "hello"
-            """
-            world
-            and me
-            """
-          ]
-        )
-      }
-    `;
-    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
-      '"{kitchenSink(strings:[\\"hello\\" \\"world\\\\nand me\\"])}"',
-    );
-  });
-
-  test("prints excaped unicode characters", () => {
-    // prettier-ignore
-    const source = /* GraphQL */ `
-      {
-        kitchenSink(strings: ["\uD83D\uDCA9\u2764\u{1F4A9}"])
-      }
-    `;
-    expect(normalizedPrint(normalize(source, schema))).toMatchInlineSnapshot(
-      '"{kitchenSink(strings:[\\"💩❤💩\\"])}"',
-    );
-  });
-});
