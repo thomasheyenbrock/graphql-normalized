@@ -641,6 +641,11 @@ _[BooleanValue](https://spec.graphql.org/October2021/#BooleanValue)_.
 
 ### Ordering
 
+In the GraphQL query language there exist unordered sets of items where the
+order in textual representation does not affect the semantics of the set. All
+such sets must be ordered alphabetically by some identifier according to the
+rules in this section.
+
 #### Ordered Definitions
 
 In order to be normalized, all
@@ -787,6 +792,10 @@ alphabetically by the type name of their
 _[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_. Two
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ are
 considered non-overlapping if {InlineFragmentsOverlap} returns **false**.
+
+Note: This specification assumes that any custom directive may influence the
+execution of the given document. Hence, this rule is formulated defensively and
+explicitly excludes inline fragments annotated with a custom directive.
 
 InlineFragmentsOverlap(inlineFragmentA, inlineFragmentB) :
 
