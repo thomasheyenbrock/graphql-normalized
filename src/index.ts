@@ -5,16 +5,20 @@ import {
   GraphQLSchema,
   InlineFragmentNode,
   Kind,
+  Lexer,
   SelectionNode,
   SelectionSetNode,
+  Source,
+  StringValueNode,
+  TokenKind,
   TypeInfo,
   parse,
   print,
-  stripIgnoredCharacters,
   visit,
   visitWithTypeInfo,
 } from "graphql";
 import { selectionsAreEquivalent } from "./equivalence";
+import { isPunctuatorTokenKind } from "graphql/language/lexer";
 
 export function normalize(
   source: string | DocumentNode,
@@ -27,6 +31,7 @@ export function normalize(
   ast = removeRedundantTypeConditions(ast, schema);
   ast = flattenSelections(ast);
   ast = deduplicateSelections(ast);
+  ast = removeBlockStrings(ast);
 
   return ast;
 }
@@ -188,7 +193,36 @@ function deduplicateSelections(ast: DocumentNode): DocumentNode {
   });
 }
 
-// TODO: stripIgnoredCharacters is not 100% aligning with the spec
-export function normalizedPrint(document: DocumentNode) {
-  return stripIgnoredCharacters(print(document));
+function removeBlockStrings(ast: DocumentNode): DocumentNode {
+  return visit(ast, {
+    StringValue(node): StringValueNode {
+      return { ...node, block: false };
+    },
+  });
+}
+
+export function normalizedPrint(document: DocumentNode | string) {
+  const printed = typeof document === "string" ? document : print(document);
+  const sourceObj = new Source(printed);
+  const body = sourceObj.body;
+  const lexer = new Lexer(sourceObj);
+  let strippedBody = "";
+  let wasLastAddedTokenNonPunctuator = false;
+
+  while (lexer.advance().kind !== TokenKind.EOF) {
+    const currentToken = lexer.token;
+    const isNonPunctuator = !isPunctuatorTokenKind(currentToken.kind);
+
+    if (wasLastAddedTokenNonPunctuator) {
+      if (isNonPunctuator || currentToken.kind === TokenKind.SPREAD) {
+        strippedBody += " ";
+      }
+    }
+
+    strippedBody += body.slice(currentToken.start, currentToken.end);
+
+    wasLastAddedTokenNonPunctuator = isNonPunctuator;
+  }
+
+  return strippedBody;
 }
