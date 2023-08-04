@@ -401,13 +401,41 @@ describe("No Duplicate Selection", () => {
     `);
   });
 
-  test("merges selection sets", () => {
+  test("merges nested selection sets", () => {
     const source = /* GraphQL */ `
       {
         profile(id: 4) {
           ... on User {
             name
           }
+          ... on User {
+            name
+            birthday
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            name
+            birthday
+          }
+        }
+      }"
+    `);
+  });
+
+  test("merges deeply nested selection sets", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            name
+          }
+        }
+        profile(id: 4) {
           ... on User {
             name
             birthday
@@ -523,6 +551,29 @@ describe("No Inline Fragments With Redundant Type Condition", () => {
     `);
   });
 
+  test("removes redundant type conditions for nested fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        user(id: 4) {
+          ... on User {
+            ... on User {
+              ... on User {
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        user(id: 4) {
+          name
+        }
+      }"
+    `);
+  });
+
   test("does not remove redundant type conditions for interfaces", () => {
     const source = /* GraphQL */ `
       {
@@ -619,6 +670,29 @@ describe("No Inline Fragments Without Context", () => {
           friends {
             name
           }
+        }
+      }"
+    `);
+  });
+
+  test("nested fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        user(id: 4) {
+          ... {
+            ... {
+              ... {
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        user(id: 4) {
+          name
         }
       }"
     `);

@@ -36,6 +36,9 @@ export function normalize(
   return ast;
 }
 
+/**
+ * Handles 2.1.3
+ */
 function inlineFragments(ast: DocumentNode): DocumentNode {
   const fragmentMap: Record<string, FragmentDefinitionNode> =
     Object.create(null);
@@ -65,6 +68,9 @@ function inlineFragments(ast: DocumentNode): DocumentNode {
   });
 }
 
+/**
+ * Handles 2.1.4
+ */
 function removeRedundantTypeConditions(
   ast: DocumentNode,
   schema: GraphQLSchema,
@@ -89,6 +95,9 @@ function removeRedundantTypeConditions(
   );
 }
 
+/**
+ * Handles 2.1.1, 2.1.5, 2.1.7, and 2.1.8
+ */
 function flattenSelections(ast: DocumentNode): DocumentNode {
   return visit(ast, {
     Field(node): FieldNode | void {
@@ -102,60 +111,65 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
         };
       }
     },
-    SelectionSet(node): SelectionSetNode | void {
-      const selections: SelectionNode[] = [];
-      for (let i = 0; i < node.selections.length; i++) {
-        const s = node.selections[i];
+    SelectionSet: {
+      leave(node): SelectionSetNode | void {
+        const selections: SelectionNode[] = [];
+        for (let i = 0; i < node.selections.length; i++) {
+          const s = node.selections[i];
 
-        if (s.kind !== Kind.INLINE_FRAGMENT) {
-          selections.push(s);
-          continue;
-        }
-
-        if (!s.typeCondition) {
-          if (!s.directives?.length) {
-            selections.push(...s.selectionSet.selections);
+          if (s.kind !== Kind.INLINE_FRAGMENT) {
+            selections.push(s);
             continue;
           }
 
-          const skipDirective = s.directives?.find(
-            (directive) => directive.name.value === "skip",
-          );
-          if (skipDirective) {
-            const ifArgValue = skipDirective.arguments?.find(
-              (arg) => arg.name.value === "if",
-            )?.value;
-            if (ifArgValue?.kind === Kind.BOOLEAN) {
-              if (!ifArgValue.value) {
-                selections.push(...s.selectionSet.selections);
-              }
+          if (!s.typeCondition) {
+            if (!s.directives?.length) {
+              selections.push(...s.selectionSet.selections);
               continue;
+            }
+
+            const skipDirective = s.directives?.find(
+              (directive) => directive.name.value === "skip",
+            );
+            if (skipDirective) {
+              const ifArgValue = skipDirective.arguments?.find(
+                (arg) => arg.name.value === "if",
+              )?.value;
+              if (ifArgValue?.kind === Kind.BOOLEAN) {
+                if (!ifArgValue.value) {
+                  selections.push(...s.selectionSet.selections);
+                }
+                continue;
+              }
+            }
+
+            const includeDirective = s.directives?.find(
+              (directive) => directive.name.value === "include",
+            );
+            if (includeDirective) {
+              const ifArgValue = includeDirective.arguments?.find(
+                (arg) => arg.name.value === "if",
+              )?.value;
+              if (ifArgValue?.kind === Kind.BOOLEAN) {
+                if (ifArgValue.value) {
+                  selections.push(...s.selectionSet.selections);
+                }
+                continue;
+              }
             }
           }
 
-          const includeDirective = s.directives?.find(
-            (directive) => directive.name.value === "include",
-          );
-          if (includeDirective) {
-            const ifArgValue = includeDirective.arguments?.find(
-              (arg) => arg.name.value === "if",
-            )?.value;
-            if (ifArgValue?.kind === Kind.BOOLEAN) {
-              if (ifArgValue.value) {
-                selections.push(...s.selectionSet.selections);
-              }
-              continue;
-            }
-          }
+          selections.push(s);
         }
-
-        selections.push(s);
-      }
-      return { kind: Kind.SELECTION_SET, selections };
+        return { kind: Kind.SELECTION_SET, selections };
+      },
     },
   });
 }
 
+/**
+ * Handles 2.1.2
+ */
 function deduplicateSelections(ast: DocumentNode): DocumentNode {
   return visit(ast, {
     SelectionSet(node): SelectionSetNode {
@@ -193,6 +207,9 @@ function deduplicateSelections(ast: DocumentNode): DocumentNode {
   });
 }
 
+/**
+ * Handles 1.1.2
+ */
 function removeBlockStrings(ast: DocumentNode): DocumentNode {
   return visit(ast, {
     StringValue(node): StringValueNode {
@@ -201,6 +218,9 @@ function removeBlockStrings(ast: DocumentNode): DocumentNode {
   });
 }
 
+/**
+ * Handles 1.1.1
+ */
 export function normalizedPrint(document: DocumentNode | string) {
   const printed = typeof document === "string" ? document : print(document);
   const sourceObj = new Source(printed);
