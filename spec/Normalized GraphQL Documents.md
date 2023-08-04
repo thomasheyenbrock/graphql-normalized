@@ -322,8 +322,8 @@ InlineFragmentsAreEquivalent(inlineFragmentA, inlineFragmentB) :
 1. If {typeConditionA} exists:
    - If {typeConditionB} does not exist:
      - Return **false**.
-   - Let {typeA} be the type name of {typeConditionA}, and let {typeB} be the
-     type name of {typeConditionB}.
+   - Let {typeA} be the name of the type from {typeConditionA}, and let {typeB}
+     be the name of the type from {typeConditionB}.
    - If {typeA} is not equal to {typeB}:
      - Return **false**.
 1. Let {directivesA} be the ordered list of
@@ -578,7 +578,122 @@ _[Directives](https://spec.graphql.org/October2021/#Directives)_.
 }
 ```
 
-TODO: no interface fields within fragment
+#### No Redundant Interface Fields
+
+A normalized GraphQL document must not contain any lists of adjacent and
+exhaustive
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_ inside
+of a selection set of a field that returns an
+_[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_ where all of
+the following conditions hold:
+
+- Either all the first fields or all the last fields inside each of the
+  _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_ are
+  equal.
+- The field identified by the previous condition is defined on the given
+  _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_
+- All _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
+  do not have any
+  _[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+  applied to them.
+
+Instead, such a field identified by the above conditions should only be
+specified once, namely before (in case it's the first field in all
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_) or
+after (in case it's the last field in all
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_) the
+list of adjacent and exhaustive
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_.
+
+Given a selection set for a field that returns an
+_[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_ {interface}
+and a list of adjacent
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
+{fragments} inside this selection set, the list {fragments} is considered
+_exhaustive_ if {FragmentsAreExhaustive(fragments, interface)} returns **true**.
+
+Within the context of this rule, two fields are considered _equal_ if they are
+represented by two deeply equal nodes in the abstract syntax tree.
+
+FragmentsAreExhaustive(fragments, interface) :
+
+1. Let {fragmentTypes} be an empty set.
+1. For each {fragment} in {fragments}:
+   - Let {typeCondition} be the type condition of {fragment}.
+   - If {typeCondition} does not exist:
+     - Continue to the next fragment.
+   - Let {type} be the name of the type from {typeCondition}.
+   - If {type} is an
+     _[object type](https://spec.graphql.org/draft/#sec-Objects)_:
+     - Add {type} to {fragmentTypes}.
+   - If {type} is an
+     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_:
+     - Let {implementors} be the result of {Implementors(type)}.
+     - Add all set items of {implementors} to {fragmentTypes}.
+1. Let {interfaceImplementors} be the result of {Implementors(interfaceType)}.
+1. For each {implementor} in {interfaceImplementors}:
+   - If {fragmentTypes} does not contain {implementor}:
+     - Return **false**.
+1. Return **true**.
+
+Implementors(interfaceType) :
+
+1. Let {objectImplementors} be the set of
+   _[object types](https://spec.graphql.org/draft/#sec-Objects)_ that implement
+   the interface type {interfaceType}.
+1. Let {interfaceImplementors} be the set of
+   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_ that
+   implement the interface type {interfaceType}.
+1. For each {interface} in {interfaceImplementors}:
+   - Let {objects} be the result of calling {Implementors(interface)}.
+   - Add all entries of the set {objects} to the set {objectImplementors}.
+1. Return {objectImplementors}.
+
+**Example**
+
+For this example, assume that the field `profile` returns an interface type
+`Profile`, and that there exist exactly two object types `User` and
+`Organization` that implement this interface type. Furthermore, assume that the
+`Profile` interface defines a field named `handle`.
+
+```graphql counter-example
+{
+  profile(id: 4) {
+    ... on Organization {
+      handle
+      members {
+        name
+      }
+    }
+    ... on User {
+      handle
+      name
+    }
+  }
+}
+```
+
+```graphql example
+{
+  profile(id: 4) {
+    handle
+    ... on Organization {
+      members {
+        name
+      }
+    }
+    ... on User {
+      name
+    }
+  }
+}
+```
+
+Note: Assume there would exist a third object type `Influencer` that also
+implements the interface `Profile`. Then the counter example above would
+actually be normalized because the list of inline fragments would not be
+exhaustive, and there does not exist a selection for the field `handle` for the
+type `Influencer`.
 
 #### No Constant @skip Directive
 
@@ -798,17 +913,17 @@ _[ObjectField](https://spec.graphql.org/October2021/#ObjectField)_ name.
 In order to be normalized, any two adjacent
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ in a
 GraphQL document that are non-overlapping and that don't have any
-_[Directives](https://spec.graphql.org/October2021/#Directives)_ applied other
-than _[@skip](https://spec.graphql.org/October2021/#sec--skip)_ or
-_[@include](https://spec.graphql.org/October2021/#sec--include)_ must be ordered
-alphabetically by the type name of their
+_[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+applied must be ordered alphabetically by the type name of their
 _[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_. Two
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ are
 considered non-overlapping if {InlineFragmentsOverlap} returns **false**.
 
-Note: This specification assumes that any custom directive may influence the
-execution of the given document. Hence, this rule is formulated defensively and
-explicitly excludes inline fragments annotated with a custom directive.
+Note: This specification assumes that any
+_[custom directive](http://spec.graphql.org/draft/#sec-Type-System.Directives.Custom-Directives)_
+may influence the execution of the given document. Hence, this rule is
+formulated defensively and explicitly excludes inline fragments annotated with a
+custom directive.
 
 InlineFragmentsOverlap(inlineFragmentA, inlineFragmentB) :
 
@@ -877,23 +992,10 @@ TypesOverlap(typeA, typeB) :
      {memberTypes} is not an empty set, otherwise return **false**.
 1. Return **false**.
 
-Implementors(interfaceType) :
-
-1. Let {objectImplementors} be the set of
-   _[object types](https://spec.graphql.org/draft/#sec-Objects)_ that implement
-   the interface type {interfaceType}.
-1. Let {interfaceImplementors} be the set of
-   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_ that
-   implement the interface type {interfaceType}.
-1. For each {interface} in {interfaceImplementors}:
-   - Let {objects} be the result of calling {Implementors(interface)}.
-   - Add all entries of the set {objects} to the set {objectImplementors}.
-1. Return {objectImplementors}.
-
 **Example for Interface Types**
 
 For this example, assume that the field `profile` returns an interface type
-`Profile`, and that there exists two object types `User` and `Organization` that
+`Profile`, and that there exist two object types `User` and `Organization` that
 implement this interface type.
 
 ```graphql counter-example
