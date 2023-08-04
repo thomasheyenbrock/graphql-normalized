@@ -775,6 +775,240 @@ _[ObjectField](https://spec.graphql.org/October2021/#ObjectField)_ name.
 }
 ```
 
+#### Ordered Non-Overlapping Inline Fragments
+
+In order to be normalized, any two adjacent
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ in a
+GraphQL document that are non-overlapping and that don't have any
+_[Directives](https://spec.graphql.org/October2021/#Directives)_ applied other
+than _[@skip](https://spec.graphql.org/October2021/#sec--skip)_ or
+_[@include](https://spec.graphql.org/October2021/#sec--include)_ must be ordered
+alphabetically by the type name of their
+_[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_. Two
+_[InlineFragments](https://spec.graphql.org/October2021/#InlineFragments)_ are
+considered non-overlapping if {InlineFragmentsOverlap} returns **false**.
+
+InlineFragmentsOverlap(inlineFragmentA, inlineFragmentB) :
+
+1. Let {typeConditionA} be the type condition of {inlineFragmentA}, and let
+   {typeConditionB} be the type condition of {inlineFragmentB}.
+1. If {typeConditionA} does not exist:
+   - Return **true**.
+1. If {typeConditionB} does not exist:
+   - Return **true**.
+1. Let {typeNameA} be the name of the type from {typeConditionA}, and let
+   {typeNameB} be the name of the type from {typeConditionB}.
+1. Let {typeA} be the schema type with the name {typeNameA}, and let {typeB} be
+   the schema type with the name {typeNameB}.
+1. Return {TypesOverlap(typeA, typeB)}.
+
+TypesOverlap(typeA, typeB) :
+
+1. If both {typeA} and {typeB} are
+   _[object types](https://spec.graphql.org/draft/#sec-Objects)_:
+   - Return **true** if {typeA} is equal to {typeB}, otherwise return **false**.
+1. If both {typeA} and {typeB} are
+   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_:
+   - Let {implementorsA} be the result of {Implementors(typeA)}, and let
+     {implementorsB} be the result of {Implementors(typeB)}.
+   - Return **true** if the intersection of the sets {implementorsA} and
+     {implementorsB} is not an empty set, otherwise return **false**.
+1. If both {typeA} and {typeB} are
+   _[union types](https://spec.graphql.org/draft/#sec-Unions)_:
+   - Let {memberTypesA} be the set of union member types of {typeA}, and let
+     {memberTypesB} be the set of union member types of {typeB}.
+   - Return **true** if the intersection of the sets {memberTypesA} and
+     {memberTypesB} is not an empty set, otherwise return **false**.
+1. If one of {typeA} and {typeB} is an
+   _[object type](https://spec.graphql.org/draft/#sec-Objects)_, and one of
+   {typeA} and {typeB} is an
+   _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_:
+   - Let {objectType} be the one type of {typeA} and {typeB} that is an
+     _[object type](https://spec.graphql.org/draft/#sec-Objects)_.
+   - Let {interfaceType} be the one type of {typeA} and {typeB} that is an
+     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_.
+   - Let {implementors} be the result of calling {Implementors(interfaceType)}.
+   - Return **true** if {implementors} contains {objectType}, otherwise return
+     **false**.
+1. If one of {typeA} and {typeB} is an
+   _[object type](https://spec.graphql.org/draft/#sec-Objects)_, and one of
+   {typeA} and {typeB} is a
+   _[union type](https://spec.graphql.org/draft/#sec-Unions)_:
+   - Let {objectType} be the one type of {typeA} and {typeB} that is an
+     _[object type](https://spec.graphql.org/draft/#sec-Objects)_.
+   - Let {unionType} be the one type of {typeA} and {typeB} that is an
+     _[union type](https://spec.graphql.org/draft/#sec-Unions)_.
+   - Let {memberTypes} be the set of union member types of {unionType}.
+   - Return **true** if {memberTypes} contains {objectType}, otherwise return
+     **false**.
+1. If one of {typeA} and {typeB} is an
+   _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_, and one
+   of {typeA} and {typeB} is a
+   _[union type](https://spec.graphql.org/draft/#sec-Unions)_:
+   - Let {interfaceType} be the one type of {typeA} and {typeB} that is an
+     _[interface type](https://spec.graphql.org/draft/#sec-Interfaces)_.
+   - Let {unionType} be the one type of {typeA} and {typeB} that is an
+     _[union type](https://spec.graphql.org/draft/#sec-Unions)_.
+   - Let {implementors} be the result of {Implementors(interfaceType)}.
+   - Let {memberTypes} be the set of union member types of {unionType}.
+   - Return **true** if the intersection of the sets {implementors} and
+     {memberTypes} is not an empty set, otherwise return **false**.
+1. Return **false**.
+
+Implementors(interfaceType) :
+
+1. Let {objectImplementors} be the set of
+   _[object types](https://spec.graphql.org/draft/#sec-Objects)_ that implement
+   the interface type {interfaceType}.
+1. Let {interfaceImplementors} be the set of
+   _[interface types](https://spec.graphql.org/draft/#sec-Interfaces)_ that
+   implement the interface type {interfaceType}.
+1. For each {interface} in {interfaceImplementors}:
+   - Let {objects} be the result of calling {Implementors(interface)}.
+   - Add all entries of the set {objects} to the set {objectImplementors}.
+1. Return {objectImplementors}.
+
+**Example for Interface Types**
+
+For this example, assume that the field `profile` returns an interface type
+`Profile`, and that there exists two object types `User` and `Organization` that
+implement this interface type.
+
+```graphql counter-example
+{
+  profile(id: 4) {
+    handle
+    ... on User {
+      name
+    }
+    ... on Organization {
+      members {
+        name
+      }
+    }
+  }
+}
+```
+
+```graphql example
+{
+  profile(id: 4) {
+    handle
+    ... on Organization {
+      members {
+        name
+      }
+    }
+    ... on User {
+      name
+    }
+  }
+}
+```
+
+**Example for Union Types**
+
+For this example, assume that the field `userResult` returns a union type with
+two member types `User` and `Error`.
+
+```graphql counter-example
+{
+  userResult(id: 4) {
+    ... on User {
+      name
+    }
+    ... on Error {
+      message
+    }
+  }
+}
+```
+
+```graphql example
+{
+  userResult(id: 4) {
+    ... on Error {
+      message
+    }
+    ... on User {
+      name
+    }
+  }
+}
+```
+
+Note: Since only _[object types](https://spec.graphql.org/draft/#sec-Objects)_
+are valid union member types, two fragments with different type conditions
+inside a selection set for a
+_[union type](https://spec.graphql.org/draft/#sec-Unions)_ can never overlap.
+
+**Example for Nested Interface Types**
+
+For this example, assume the following GraphQL schema.
+
+```graphql
+type Query {
+  node(id: ID): Node
+}
+
+interface Node {
+  id: ID
+}
+
+interface InterfaceA implements Node {
+  id: ID
+  fieldA: String
+}
+
+interface InterfaceB implements Node {
+  id: ID
+  fieldB: String
+}
+
+type ObjectA implements Node & InterfaceA {
+  id: ID
+  fieldA: String
+}
+
+type ObjectB implements Node & InterfaceB {
+  id: ID
+  fieldB: String
+}
+
+type ObjectAB implements Node & InterfaceA & InterfaceB {
+  id: ID
+  fieldA: String
+  fieldB: String
+}
+```
+
+Then the following query is normalized.
+
+```graphql example
+{
+  node(id: 4) {
+    ... on InterfaceB {
+      fieldB
+    }
+    ... on InterfaceA {
+      fieldA
+    }
+  }
+}
+```
+
+The two inline fragments cannot be reordered without potentially changing the
+order of fields in the execution result. If the returned node if of type
+`ObjectAB` then both type conditions of the two inline fragments will match, and
+the fields are returned in the order in which the inline fragments are included
+in the selection set.
+
+Note: If the object type `ObjectAB` would not exist, then the example query
+above would **not** be normalized, because `InterfaceA` and `InterfaceB` would
+not overlap anymore. In other words, for all possible object types returned by
+the `node` field only one of the inline fragments could be applied, but never
+both.
+
 ## Type System Documents
 
 TODO: basically also just sort things
