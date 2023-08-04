@@ -578,7 +578,7 @@ _[Directives](https://spec.graphql.org/October2021/#Directives)_.
 }
 ```
 
-#### No Redundant Interface Fields
+#### No Repeated Interface Fields in Exhaustive Fragment List
 
 A normalized GraphQL document must not contain any lists of adjacent and
 exhaustive
