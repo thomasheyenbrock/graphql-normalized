@@ -283,7 +283,7 @@ SelectionsAreEquivalent(selectionA, selectionB) :
    - If {selectionB} is not a
      _[FragmentSpread](https://spec.graphql.org/October2021/#FragmentSpread)_:
      - Return **false**.
-   - Otherwise, return {FragmentSpreadsAreEquivalent(selectionA, selectionB)}.
+   - Otherwise, return {FragmentSpreadsAreEqual(selectionA, selectionB)}.
 
 FieldsAreEquivalent(fieldA, fieldB) :
 
@@ -335,7 +335,7 @@ InlineFragmentsAreEquivalent(inlineFragmentA, inlineFragmentB) :
    - Return **false**.
 1. Return **true**.
 
-FragmentSpreadsAreEquivalent(fragmentSpreadA, fragmentSpreadB) :
+FragmentSpreadsAreEqual(fragmentSpreadA, fragmentSpreadB) :
 
 1. Let {fragmentNameA} be the fragment name of {fragmentSpreadA}, and let
    {fragmentNameB} be the fragment name of {fragmentSpreadB}.
@@ -574,6 +574,298 @@ _[Directives](https://spec.graphql.org/October2021/#Directives)_.
 {
   user(id: 4) {
     name
+  }
+}
+```
+
+#### No Leading Redundant Interface Selections
+
+A normalized GraphQL document must not contain any leading redundant
+_[Selection](https://spec.graphql.org/October2021/#Selection)_ inside an
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_ defined
+inside a selection set of a parent field that returns an
+_[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
+an equal selection is already defined in said selection set _somewhere before_
+the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+
+Formally, a selection is considered _leading redundant_ if
+{SelectionIsLeadingRedundant} returns **true**.
+
+SelectionIsLeadingRedundant(selection) :
+
+1. Let {selectionSet} be the selection set in which {selection} is defined.
+1. Let {parentNode} be the node that contains {selectionSet}.
+1. If {parentNode} is not an
+   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
+1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
+1. If {parentType} is not an
+   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_:
+   - Return **false**.
+1. Let {previousSelections} be the list of selection in {parentSelectionSet}
+   before {parentNode}.
+1. If {previousSelections} is empty:
+   - Return **false**.
+1. For each {previousSelection} in {previousSelections}:
+   - If {SelectionsAreEqual(selection, previousSelection)} is equal to **true**:
+     - Return **true**.
+1. Return **false**.
+
+TypeForSelectionSet(selectionSet) :
+
+1. Let {parentNode} be the node that contains {selectionSet}.
+1. If {parentNode} is an
+   _[OperationDefinition](https://spec.graphql.org/October2021/#OperationDefinition)_:
+   - Let {operationType} be the operation type of {parentNode}.
+   - Let {rootOperationType} be the named type defined in the
+     _[RootOperationTypeDefinition](https://spec.graphql.org/October2021/#RootOperationTypeDefinition)_
+     for {operationType}.
+   - Return {rootOperationType}.
+1. If {parentNode} is a _[Field](https://spec.graphql.org/October2021/#Field)_:
+   - Let {fieldDefinition} be the
+     _[FieldDefinition](https://spec.graphql.org/October2021/#FieldDefinition)_
+     that defines the field {parentNode}.
+   - Let {outputType} be the type of {fieldDefinition}.
+   - Let {unwrappedType} be the
+     _[unwrapped type](https://spec.graphql.org/October2021/#sec-Wrapping-Types)_
+     of {outputType}.
+   - Return {unwrappedType}.
+1. If {parentNode} is an
+   _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Let {typeCondition} be the
+     _[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_ of
+     {parentNode}.
+   - If {typeCondition} exists:
+     - Let {type} be the type of {typeCondition}.
+     - Return {type}.
+   - If {typeCondition} does not exist:
+     - Let {parentSelectionSet} be the selection set that contains {parentNode}.
+     - Return {TypeForSelectionSet(parentSelectionSet)}.
+1. If {parentNode} is a
+   _[FragmentSpread](https://spec.graphql.org/October2021/#FragmentSpread)_:
+   - Let {typeCondition} be the
+     _[TypeCondition](https://spec.graphql.org/October2021/#TypeCondition)_ of
+     {parentNode}.
+   - Let {type} be the type of {typeCondition}.
+   - Return {type}.
+
+SelectionsAreEqual(selectionA, selectionB) :
+
+1. If both {selectionA} and {selectionB} are
+   _[Fields](https://spec.graphql.org/October2021/#Field)_:
+   - Return {FieldsAreEqual(selectionA, selectionB)}
+1. If both {selectionA} and {selectionB} are
+   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return {InlineFragmentsAreEqual(selectionA, selectionB)}
+1. If both {selectionA} and {selectionB} are
+   _[FragmentSpreads](https://spec.graphql.org/October2021/#FragmentSpread)_:
+   - Return {FragmentSpreadsAreEqual(selectionA, selectionB)}
+1. Return **false**.
+
+FieldsAreEqual(fieldA, fieldB) :
+
+1. If {FieldsAreEquivalent(fieldA, fieldB)} is equal to **false**:
+   - Return **false**.
+1. Let {selectionSetA} be the selection set of {fieldA}, and let {selectionSetB}
+   be the selection set of {fieldB}.
+1. If {selectionSetA} does not exist:
+   - Return **true** if {selectionSetB} does not exist, otherwise return
+     **false**.
+1. If {selectionSetB} does not exist:
+   - Return **false**.
+1. Return {SelectionSetsAreEqual(selectionSetA, selectionSetB)}.
+
+InlineFragmentsAreEqual(inlineFragmentA, inlineFragmentB) :
+
+1. If {InlineFragmentsAreEquivalent(inlineFragmentA, inlineFragmentB)} is equal
+   to **false**:
+   - Return **false**.
+1. Let {selectionSetA} be the selection set of {inlineFragmentA}, and let
+   {selectionSetB} be the selection set of {inlineFragmentB}.
+1. Return {SelectionSetsAreEqual(selectionSetA, selectionSetB)}.
+
+SelectionSetsAreEqual(selectionSetA, selectionSetB) :
+
+1. If the count of selections in {selectionSetA} is not equal to the count of
+   selections in {selectionSetB}:
+   - Return **false**.
+1. For each _[Selection](https://spec.graphql.org/October2021/#Selection)_
+   {selectionA} in {selectionSetA}:
+   - Let {selectionB} be the
+     _[Selection](https://spec.graphql.org/October2021/#Selection)_ from
+     {selectionSetB} at the same index as {selectionA} in {selectionSetA}.
+   - If {SelectionsAreEqual(selectionA, selectionB)} is equal to **false**:
+     - Return **false**.
+1. Return **true**.
+
+**Example**
+
+```graphql counter-example
+{
+  profile(id: 4) {
+    handle
+    ... on User {
+      handle
+      name
+    }
+  }
+}
+```
+
+```graphql example
+{
+  profile(id: 4) {
+    handle
+    ... on User {
+      name
+    }
+  }
+}
+```
+
+#### No Lagging Redundant Interface Selections
+
+A normalized GraphQL document must not contain any lagging redundant
+_[Selection](https://spec.graphql.org/October2021/#Selection)_ that is the first
+selection inside an
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_ defined
+inside a selection set of a parent field that returns an
+_[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
+an equal selection is already defined in said selection set _immediately after_
+the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+
+A lagging redundant selection should be replaced by only specifying the
+selection once _immediately before_ said
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+
+Formally, a selection is considered _lagging redundant_ if
+{SelectionIsLaggingRedundant} returns **true**.
+
+SelectionIsLaggingRedundant(selection) :
+
+1. Let {selectionSet} be the selection set in which {selection} is defined.
+1. If {selection} is not the first
+   _[Selection](https://spec.graphql.org/October2021/#Selection)_ in
+   {selectionSet}:
+   - Return **false**.
+1. Let {parentNode} be the node that contains {selectionSet}.
+1. If {parentNode} is not an
+   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
+1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
+1. If {parentType} is not an
+   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_:
+   - Return **false**.
+1. Let {nextSelection} be the selection in {parentSelectionSet} after
+   {parentNode}.
+1. If {nextSelection} does not exist:
+   - Return **false**.
+1. Return {SelectionsAreEqual(selection, nextSelection)}.
+
+**Example**
+
+```graphql counter-example
+{
+  profile(id: 4) {
+    ... on User {
+      __typename
+      handle
+      friends {
+        name
+      }
+    }
+    handle
+  }
+}
+```
+
+```graphql example
+{
+  profile(id: 4) {
+    handle
+    ... on User {
+      friends {
+        name
+      }
+    }
+  }
+}
+```
+
+#### No Lagging Redundant Interface Selection List
+
+A normalized GraphQL document must not contain any lagging redundant
+_[Selection](https://spec.graphql.org/October2021/#Selection)_ list that is
+located at the end of a selection set inside an
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_ defined
+inside a selection set of a parent field that returns an
+_[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
+an equal list of selections is already defined in said selection set
+_immediately after_ the
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+
+Formally, a list of consecutive selections is considered _lagging redundant_ if
+{SelectionListIsLaggingRedundant} returns **true**.
+
+SelectionListIsLaggingRedundant(selections) :
+
+1. Let {selectionSet} be the selection set in which the
+   _[Selections](https://spec.graphql.org/October2021/#Selection)_ from
+   {selections} are defined.
+1. If there exists one ore more
+   _[Selections](https://spec.graphql.org/October2021/#Selection)_ in
+   {selectionSet} after {selections}:
+   - Return **false**.
+1. Let {parentNode} be the node that contains {selectionSet}.
+1. If {parentNode} is not an
+   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
+1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
+1. If {parentType} is not an
+   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_:
+   - Return **false**.
+1. Let {nextSelections} be the list of selections in {parentSelectionSet} after
+   {parentNode} with the same length as {selections}.
+1. If the length of {nextSelections} is smaller than the length of {selections}:
+   - Return **false**.
+1. For each {selection} in {selections}:
+   - Let {nextSelection} be the selection from {nextSelections} with the same
+     index as {selection} in {selections}.
+   - If {SelectionsAreEqual(selection, nextSelection)} is equal to **false**:
+     - Return **false**.
+1. Return **true**.
+
+**Example**
+
+```graphql counter-example
+{
+  profile(id: 4) {
+    ... on User {
+      friends {
+        name
+      }
+      __typename
+      handle
+    }
+    __typename
+    handle
+  }
+}
+```
+
+```graphql example
+{
+  profile(id: 4) {
+    ... on User {
+      friends {
+        name
+      }
+    }
+    __typename
+    handle
   }
 }
 ```
