@@ -870,7 +870,7 @@ SelectionListIsLaggingRedundant(selections) :
 }
 ```
 
-#### No Repeated Interface Fields in Exhaustive Fragment List
+#### No Repeated Interface Selections in Exhaustive Fragment List
 
 A normalized GraphQL document must not contain any lists of adjacent and
 exhaustive
@@ -879,18 +879,35 @@ of a selection set of a field that returns an
 _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_ where
 all of the following conditions hold:
 
-- Either all the first fields or all the last fields inside each of the
+- Either all the first
+  _[Selections](https://spec.graphql.org/October2021/#Selection)_ or all the
+  last _[Selections](https://spec.graphql.org/October2021/#Selection)_ inside
+  each of the
   _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_ are
-  equal.
-- The field identified by the previous condition is defined on the given
+  equal (i.e. {SelectionsAreEqual} returns **true**).
+- The _[Selection](https://spec.graphql.org/October2021/#Selection)_ identified
+  by the previous condition is defined on the given
   _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_
+  - If the _[Selection](https://spec.graphql.org/October2021/#Selection)_ is a
+    _[Field](https://spec.graphql.org/October2021/#Field)_, that means the field
+    is defined in the
+    _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
+  - If the _[Selection](https://spec.graphql.org/October2021/#Selection)_ is an
+    _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_,
+    that means the
+    _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_
+    either has no type condition or the type from its type condition is equal to
+    the given
+    _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
+    _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
 - All _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
   do not have any
   _[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
   applied to them.
 
-Instead, such a field identified by the above conditions should only be
-specified once, namely before (in case it's the first field in all
+Instead, such a _[Selection](https://spec.graphql.org/October2021/#Selection)_
+identified by the above conditions should only be specified once, namely before
+(in case it's the first field in all
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_) or
 after (in case it's the last field in all
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_) the
@@ -903,9 +920,6 @@ _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_
 _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
 {fragments} inside this selection set, the list {fragments} is considered
 _exhaustive_ if {FragmentsAreExhaustive(fragments, interface)} returns **true**.
-
-Within the context of this rule, two fields are considered _equal_ if they are
-represented by two deeply equal nodes in the abstract syntax tree.
 
 FragmentsAreExhaustive(fragments, interface) :
 
