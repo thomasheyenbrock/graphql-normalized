@@ -98,21 +98,21 @@ must be inserted between two tokens for which {ShouldSeparateWithSpace} returns
 ShouldSeparateWithSpace(firstToken, secondToken) :
 
 1. If {secondToken} is of the kind
-   _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_ and equals
-   the tripple-dot (**...**):
+   _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_ and is equal
+   to the tripple-dot (**...**):
    - If {firstToken} is a
      [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
      kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
      - Return **true**.
    - Return **false**.
-2. If {firstToken} is a
+1. If {firstToken} is a
    [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
    kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
    - If {secondToken} is a
      [lexical token](https://spec.graphql.org/October2021/#Token) and not of the
      kind _[Punctuator](https://spec.graphql.org/October2021/#Punctuator)_:
      - Return **true**.
-3. Return **false**.
+1. Return **false**.
 
 Note: The definition of {ShouldSeparateWithSpace} intentionally adds ignored
 tokens in _some_ places where they would not strictly be necessary in order to
