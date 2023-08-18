@@ -23,7 +23,7 @@ export function selectionsAreEquivalent(
         : false;
     case Kind.FRAGMENT_SPREAD:
       return b.kind === Kind.FRAGMENT_SPREAD
-        ? fragmentSpreadsAreEquivalent(a, b)
+        ? fragmentSpreadsAreEqual(a, b)
         : false;
   }
 }
@@ -50,7 +50,7 @@ function inlineFragmentsAreEquivalent(
   return true;
 }
 
-function fragmentSpreadsAreEquivalent(
+function fragmentSpreadsAreEqual(
   a: FragmentSpreadNode,
   b: FragmentSpreadNode,
 ): boolean {
