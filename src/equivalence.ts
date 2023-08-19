@@ -23,12 +23,12 @@ export function selectionsAreEquivalent(
         : false;
     case Kind.FRAGMENT_SPREAD:
       return b.kind === Kind.FRAGMENT_SPREAD
-        ? fragmentSpreadsAreEqual(a, b)
+        ? fragmentSpreadsAreEquivalent(a, b)
         : false;
   }
 }
 
-function fieldsAreEquivalent(a: FieldNode, b: FieldNode): boolean {
+export function fieldsAreEquivalent(a: FieldNode, b: FieldNode): boolean {
   if ((a.alias?.value ?? a.name.value) !== (b.alias?.value ?? b.name.value))
     return false;
   if (!argumentsAreEquivalent(a.arguments, b.arguments)) return false;
@@ -36,7 +36,7 @@ function fieldsAreEquivalent(a: FieldNode, b: FieldNode): boolean {
   return true;
 }
 
-function inlineFragmentsAreEquivalent(
+export function inlineFragmentsAreEquivalent(
   a: InlineFragmentNode,
   b: InlineFragmentNode,
 ): boolean {
@@ -50,7 +50,7 @@ function inlineFragmentsAreEquivalent(
   return true;
 }
 
-function fragmentSpreadsAreEqual(
+export function fragmentSpreadsAreEquivalent(
   a: FragmentSpreadNode,
   b: FragmentSpreadNode,
 ): boolean {

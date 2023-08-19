@@ -1,6 +1,6 @@
+import { buildSchema, print } from "graphql";
 import { describe, expect, test } from "vitest";
 import { normalize, normalizedPrint } from ".";
-import { buildSchema, print } from "graphql";
 
 const schema = buildSchema(/* GraphQL */ `
   type Query {
@@ -698,6 +698,91 @@ describe("No Inline Fragments Without Context", () => {
     `);
   });
 });
+
+describe("No Leading Redundant Interface Selections", () => {
+  test("removes one leading redundant field", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          handle
+          ... on User {
+            handle
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes multiple leading redundant field", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          __typename
+          handle
+          ... on User {
+            __typename
+            handle
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          __typename
+          handle
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes redundant field in fragment spreads", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          handle
+          ...UserFragment
+        }
+      }
+
+      fragment UserFragment on User {
+        handle
+        name
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+});
+
+test.skip("No Lagging Redundant Interface Selections", () => {});
+
+test.skip("No Lagging Redundant Interface Selection List", () => {});
+
+test.skip("No Repeated Interface Selections in Exhaustive Fragment List", () => {});
 
 describe("No Constant @skip Directive", () => {
   test("reduces inline fragments without a type condidition", () => {

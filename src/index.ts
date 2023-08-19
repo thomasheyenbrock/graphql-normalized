@@ -12,6 +12,7 @@ import {
   StringValueNode,
   TokenKind,
   TypeInfo,
+  isInterfaceType,
   parse,
   print,
   visit,
@@ -19,6 +20,7 @@ import {
 } from "graphql";
 import { selectionsAreEquivalent } from "./equivalence";
 import { isPunctuatorTokenKind } from "graphql/language/lexer";
+import { selectionsAreEqual } from "./equality";
 
 export function normalize(
   source: string | DocumentNode,
@@ -30,6 +32,7 @@ export function normalize(
   ast = inlineFragments(ast);
   ast = removeRedundantTypeConditions(ast, schema);
   ast = flattenSelections(ast);
+  ast = removeRedundantSelections(ast, schema);
   ast = deduplicateSelections(ast);
   ast = removeBlockStrings(ast);
 
@@ -96,7 +99,7 @@ function removeRedundantTypeConditions(
 }
 
 /**
- * Handles 2.1.1, 2.1.5, 2.1.7, and 2.1.8
+ * Handles 2.1.1, 2.1.5, 2.1.10, and 2.1.11
  */
 function flattenSelections(ast: DocumentNode): DocumentNode {
   return visit(ast, {
@@ -165,6 +168,49 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
       },
     },
   });
+}
+
+/**
+ * Handles 2.1.6
+ */
+function removeRedundantSelections(
+  ast: DocumentNode,
+  schema: GraphQLSchema,
+): DocumentNode {
+  const typeInfo = new TypeInfo(schema);
+  return visit(
+    ast,
+    visitWithTypeInfo(typeInfo, {
+      SelectionSet: {
+        leave(parentSelectionSet): SelectionSetNode {
+          const type = typeInfo.getType();
+          if (!isInterfaceType(type)) return parentSelectionSet;
+
+          for (let i = 0; i < parentSelectionSet.selections.length; i++) {
+            const currentSelection = parentSelectionSet.selections[i];
+            if (currentSelection.kind === Kind.INLINE_FRAGMENT) {
+              const selections: SelectionNode[] = [];
+              for (
+                let j = 0;
+                j < currentSelection.selectionSet.selections.length;
+                j++
+              ) {
+                const selection = currentSelection.selectionSet.selections[j];
+                if (
+                  !selectionIsLeadingRedundant(selection, parentSelectionSet, i)
+                ) {
+                  selections.push(selection);
+                }
+              }
+              currentSelection.selectionSet.selections = selections;
+            }
+          }
+
+          return parentSelectionSet;
+        },
+      },
+    }),
+  );
 }
 
 /**
@@ -245,4 +291,16 @@ export function normalizedPrint(document: DocumentNode | string) {
   }
 
   return strippedBody;
+}
+
+function selectionIsLeadingRedundant(
+  selection: SelectionNode,
+  parentSelectionSet: SelectionSetNode,
+  index: number,
+): boolean {
+  for (let i = 0; i < index; i++) {
+    const parentSelection = parentSelectionSet.selections[i];
+    if (selectionsAreEqual(selection, parentSelection)) return true;
+  }
+  return false;
 }
