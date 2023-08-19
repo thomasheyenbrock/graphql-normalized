@@ -32,8 +32,7 @@ export function normalize(
   ast = inlineFragments(ast);
   ast = removeRedundantTypeConditions(ast, schema);
   ast = flattenSelections(ast);
-  ast = removeRedundantSelections(ast, schema);
-  ast = deduplicateSelections(ast);
+  ast = deduplicateSelections(ast, schema);
   ast = removeBlockStrings(ast);
 
   return ast;
@@ -171,9 +170,9 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
 }
 
 /**
- * Handles 2.1.6
+ * Handles 2.1.2, and 2.1.6
  */
-function removeRedundantSelections(
+function deduplicateSelections(
   ast: DocumentNode,
   schema: GraphQLSchema,
 ): DocumentNode {
@@ -181,15 +180,20 @@ function removeRedundantSelections(
   return visit(
     ast,
     visitWithTypeInfo(typeInfo, {
-      SelectionSet: {
-        leave(parentSelectionSet): SelectionSetNode {
+      SelectionSet(node): SelectionSetNode {
+        let hasMadeChange = false;
+        do {
+          const result = removeDuplicateSelections(node);
+          const parentSelectionSet = result.selectionSet;
+          hasMadeChange = result.hasMadeChange;
+
           const type = typeInfo.getType();
           if (!isInterfaceType(type)) return parentSelectionSet;
 
           for (let i = 0; i < parentSelectionSet.selections.length; i++) {
             const currentSelection = parentSelectionSet.selections[i];
             if (currentSelection.kind === Kind.INLINE_FRAGMENT) {
-              const selections: SelectionNode[] = [];
+              const inlineFragmentSelections: SelectionNode[] = [];
               for (
                 let j = 0;
                 j < currentSelection.selectionSet.selections.length;
@@ -197,60 +201,25 @@ function removeRedundantSelections(
               ) {
                 const selection = currentSelection.selectionSet.selections[j];
                 if (
-                  !selectionIsLeadingRedundant(selection, parentSelectionSet, i)
+                  selectionIsLeadingRedundant(selection, parentSelectionSet, i)
                 ) {
-                  selections.push(selection);
+                  hasMadeChange = true;
+                } else {
+                  inlineFragmentSelections.push(selection);
                 }
               }
-              currentSelection.selectionSet.selections = selections;
+              currentSelection.selectionSet.selections =
+                inlineFragmentSelections;
             }
           }
 
-          return parentSelectionSet;
-        },
+          node = parentSelectionSet;
+        } while (hasMadeChange);
+
+        return node;
       },
     }),
   );
-}
-
-/**
- * Handles 2.1.2
- */
-function deduplicateSelections(ast: DocumentNode): DocumentNode {
-  return visit(ast, {
-    SelectionSet(node): SelectionSetNode {
-      const selections: (FieldNode | InlineFragmentNode)[] = [];
-
-      for (let i = 0; i < node.selections.length; i++) {
-        const s = node.selections[i] as FieldNode | InlineFragmentNode;
-
-        let hasEquivalent = false;
-        for (let j = 0; j < selections.length; j++) {
-          const s2 = selections[j];
-          if (selectionsAreEquivalent(s, s2)) {
-            if (s2.selectionSet) {
-              selections[j] = {
-                ...s2,
-                selectionSet: {
-                  ...s2.selectionSet,
-                  selections: [
-                    ...s2.selectionSet.selections,
-                    ...((s as FieldNode).selectionSet?.selections || []),
-                  ],
-                },
-              };
-            }
-            hasEquivalent = true;
-            break;
-          }
-        }
-
-        if (!hasEquivalent) selections.push(s);
-      }
-
-      return { kind: Kind.SELECTION_SET, selections };
-    },
-  });
 }
 
 /**
@@ -291,6 +260,51 @@ export function normalizedPrint(document: DocumentNode | string) {
   }
 
   return strippedBody;
+}
+
+function removeDuplicateSelections(selectionSet: SelectionSetNode): {
+  selectionSet: SelectionSetNode;
+  hasMadeChange: boolean;
+} {
+  let hasMadeChange = false;
+
+  const selections: (FieldNode | InlineFragmentNode)[] = [];
+
+  for (let i = 0; i < selectionSet.selections.length; i++) {
+    const s = selectionSet.selections[i] as FieldNode | InlineFragmentNode;
+
+    let hasEquivalent = false;
+    for (let j = 0; j < selections.length; j++) {
+      const s2 = selections[j];
+      if (selectionsAreEquivalent(s, s2)) {
+        if (s2.selectionSet) {
+          selections[j] = {
+            ...s2,
+            selectionSet: {
+              ...s2.selectionSet,
+              selections: [
+                ...s2.selectionSet.selections,
+                ...((s as FieldNode).selectionSet?.selections || []),
+              ],
+            },
+          };
+        }
+        hasEquivalent = true;
+        break;
+      }
+    }
+
+    if (hasEquivalent) {
+      hasMadeChange = true;
+    } else {
+      selections.push(s);
+    }
+  }
+
+  return {
+    selectionSet: { kind: Kind.SELECTION_SET, selections },
+    hasMadeChange,
+  };
 }
 
 function selectionIsLeadingRedundant(
