@@ -770,7 +770,6 @@ SelectionIsLaggingRedundant(selection) :
 {
   profile(id: 4) {
     ... on User {
-      __typename
       handle
       friends {
         name
