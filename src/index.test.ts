@@ -732,7 +732,7 @@ describe("No Leading Redundant Interface Selections", () => {
     `);
   });
 
-  test("removes multiple leading redundant field", () => {
+  test("removes multiple leading redundant fields", () => {
     const source = /* GraphQL */ `
       {
         profile(id: 4) {
@@ -759,7 +759,7 @@ describe("No Leading Redundant Interface Selections", () => {
     `);
   });
 
-  test("removes redundant field in fragment spreads", () => {
+  test("removes leading redundant field in fragment spreads", () => {
     const source = /* GraphQL */ `
       {
         profile(id: 4) {
@@ -785,7 +785,7 @@ describe("No Leading Redundant Interface Selections", () => {
     `);
   });
 
-  test("removes redundant field with selection set", () => {
+  test("removes leading redundant field with selection set", () => {
     const source = /* GraphQL */ `
       {
         profile(id: 4) {
@@ -815,7 +815,7 @@ describe("No Leading Redundant Interface Selections", () => {
     `);
   });
 
-  test("removes redundant inline fragment", () => {
+  test("removes leading redundant inline fragment", () => {
     const source = /* GraphQL */ `
       {
         profile(id: 4) {
@@ -846,7 +846,160 @@ describe("No Leading Redundant Interface Selections", () => {
   });
 });
 
-test.skip("No Lagging Redundant Interface Selections", () => {});
+describe("No Lagging Redundant Interface Selections", () => {
+  test("removes one lagging redundant field", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            handle
+            friends {
+              name
+            }
+          }
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on User {
+            friends {
+              name
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes multiple lagging redundant fields", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            __typename
+            handle
+            friends {
+              name
+            }
+          }
+          __typename
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          __typename
+          handle
+          ... on User {
+            friends {
+              name
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant field in fragment spreads", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ...UserFragment
+          handle
+        }
+      }
+
+      fragment UserFragment on User {
+        handle
+        friends {
+          name
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on User {
+            friends {
+              name
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant field with selection set", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            followers {
+              count
+            }
+            friends {
+              name
+            }
+          }
+          followers {
+            count
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          followers {
+            count
+          }
+          ... on User {
+            friends {
+              name
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant inline fragment", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            ... @custom {
+              handle
+            }
+            name
+          }
+          ... @custom {
+            handle
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... @custom {
+            handle
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+});
 
 test.skip("No Lagging Redundant Interface Selection List", () => {});
 

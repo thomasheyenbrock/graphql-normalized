@@ -170,7 +170,7 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
 }
 
 /**
- * Handles 2.1.2, and 2.1.6
+ * Handles 2.1.2, 2.1.6, and 2.1.7
  */
 function deduplicateSelections(
   ast: DocumentNode,
@@ -181,14 +181,18 @@ function deduplicateSelections(
     ast,
     visitWithTypeInfo(typeInfo, {
       SelectionSet(node): SelectionSetNode {
+        const type = typeInfo.getType();
+
         let hasMadeChange = false;
         do {
           const result = removeDuplicateSelections(node);
           const parentSelectionSet = result.selectionSet;
           hasMadeChange = result.hasMadeChange;
 
-          const type = typeInfo.getType();
-          if (!isInterfaceType(type)) return parentSelectionSet;
+          if (!isInterfaceType(type)) {
+            node = parentSelectionSet;
+            continue;
+          }
 
           for (let i = 0; i < parentSelectionSet.selections.length; i++) {
             const currentSelection = parentSelectionSet.selections[i];
@@ -200,13 +204,32 @@ function deduplicateSelections(
                 j++
               ) {
                 const selection = currentSelection.selectionSet.selections[j];
+
                 if (
                   selectionIsLeadingRedundant(selection, parentSelectionSet, i)
                 ) {
                   hasMadeChange = true;
-                } else {
-                  inlineFragmentSelections.push(selection);
+                  continue;
                 }
+
+                if (
+                  selectionIsLaggingRedundant(
+                    selection,
+                    parentSelectionSet,
+                    i,
+                    j,
+                  )
+                ) {
+                  const parentSelections = [...parentSelectionSet.selections];
+                  const nextSelection = parentSelections.splice(i + 1, 1);
+                  parentSelections.splice(i, 0, ...nextSelection);
+                  parentSelectionSet.selections = parentSelections;
+
+                  hasMadeChange = true;
+                  continue;
+                }
+
+                inlineFragmentSelections.push(selection);
               }
               currentSelection.selectionSet.selections =
                 inlineFragmentSelections;
@@ -317,4 +340,18 @@ function selectionIsLeadingRedundant(
     if (selectionsAreEqual(selection, parentSelection)) return true;
   }
   return false;
+}
+
+function selectionIsLaggingRedundant(
+  selection: SelectionNode,
+  parentSelectionSet: SelectionSetNode,
+  parentIndex: number,
+  index: number,
+): boolean {
+  if (index !== 0) return false;
+
+  const nextSelection = parentSelectionSet.selections[parentIndex + 1];
+  if (!nextSelection) return false;
+
+  return selectionsAreEqual(selection, nextSelection);
 }
