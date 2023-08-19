@@ -21,10 +21,16 @@ const schema = buildSchema(/* GraphQL */ `
 
   interface Profile {
     handle: String
+    followers: Followers
+  }
+
+  type Followers {
+    count: Int
   }
 
   type User implements Profile {
     handle: String
+    followers: Followers
 
     name: String
     birthday(includeYear: Boolean, humanReadable: Boolean): String
@@ -33,6 +39,8 @@ const schema = buildSchema(/* GraphQL */ `
 
   type Organization implements Profile {
     handle: String
+    followers: Followers
+
     members: [User]
   }
 
@@ -769,6 +777,66 @@ describe("No Leading Redundant Interface Selections", () => {
       "{
         profile(id: 4) {
           handle
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes redundant field with selection set", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          followers {
+            count
+          }
+          ... on User {
+            followers {
+              count
+            }
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          followers {
+            count
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes redundant inline fragment", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... @custom {
+            handle
+          }
+          ... on User {
+            ... @custom {
+              handle
+            }
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... @custom {
+            handle
+          }
           ... on User {
             name
           }
