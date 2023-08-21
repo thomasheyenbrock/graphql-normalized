@@ -1001,7 +1001,160 @@ describe("No Lagging Redundant Interface Selections", () => {
   });
 });
 
-test.skip("No Lagging Redundant Interface Selection List", () => {});
+describe("No Lagging Redundant Interface Selection List", () => {
+  test("removes one lagging redundant field list of length 1", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+            handle
+          }
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+          }
+          handle
+        }
+      }"
+    `);
+  });
+
+  test("removes multiple lagging redundant field list of length > 1", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+            __typename
+            handle
+          }
+          __typename
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+          }
+          __typename
+          handle
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant field list in fragment spreads", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ...UserFragment
+          handle
+        }
+      }
+
+      fragment UserFragment on User {
+        friends {
+          name
+        }
+        handle
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+          }
+          handle
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant field list with selection set", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+            followers {
+              count
+            }
+          }
+          followers {
+            count
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            friends {
+              name
+            }
+          }
+          followers {
+            count
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes lagging redundant inline fragment list", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            name
+            ... @custom {
+              handle
+            }
+          }
+          ... @custom {
+            handle
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on User {
+            name
+          }
+          ... @custom {
+            handle
+          }
+        }
+      }"
+    `);
+  });
+});
 
 test.skip("No Repeated Interface Selections in Exhaustive Fragment List", () => {});
 

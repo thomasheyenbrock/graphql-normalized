@@ -170,7 +170,7 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
 }
 
 /**
- * Handles 2.1.2, 2.1.6, and 2.1.7
+ * Handles 2.1.2, 2.1.6, 2.1.7, and 2.1.8
  */
 function deduplicateSelections(
   ast: DocumentNode,
@@ -231,6 +231,24 @@ function deduplicateSelections(
 
                 inlineFragmentSelections.push(selection);
               }
+
+              for (let j = inlineFragmentSelections.length - 1; j >= 0; j--) {
+                const selections = inlineFragmentSelections.slice(
+                  j,
+                  inlineFragmentSelections.length,
+                );
+                if (
+                  selectionListIsLaggingRedundant(
+                    selections,
+                    parentSelectionSet,
+                    i,
+                  )
+                ) {
+                  inlineFragmentSelections.splice(j);
+                  hasMadeChange = true;
+                }
+              }
+
               currentSelection.selectionSet.selections =
                 inlineFragmentSelections;
             }
@@ -354,4 +372,24 @@ function selectionIsLaggingRedundant(
   if (!nextSelection) return false;
 
   return selectionsAreEqual(selection, nextSelection);
+}
+
+function selectionListIsLaggingRedundant(
+  selections: SelectionNode[],
+  parentSelectionSet: SelectionSetNode,
+  parentIndex: number,
+): boolean {
+  const nextSelections = parentSelectionSet.selections.slice(
+    parentIndex + 1,
+    parentIndex + 1 + selections.length,
+  );
+  if (nextSelections.length !== selections.length) return false;
+
+  for (let i = 0; i < selections.length; i++) {
+    const selection = selections[i];
+    const nextSelection = nextSelections[i];
+    if (!selectionsAreEqual(selection, nextSelection)) return false;
+  }
+
+  return true;
 }
