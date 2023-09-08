@@ -3,6 +3,7 @@ import {
   DocumentNode,
   FieldNode,
   FragmentDefinitionNode,
+  GraphQLInterfaceType,
   GraphQLSchema,
   InlineFragmentNode,
   Kind,
@@ -14,6 +15,7 @@ import {
   TokenKind,
   TypeInfo,
   isInterfaceType,
+  isObjectType,
   parse,
   print,
   specifiedDirectives,
@@ -172,7 +174,7 @@ function flattenSelections(ast: DocumentNode): DocumentNode {
 }
 
 /**
- * Handles 2.1.2, 2.1.6, 2.1.7, and 2.1.8
+ * Handles 2.1.2, 2.1.6, 2.1.7, 2.1.8, and 2.1.9
  */
 function deduplicateSelections(
   ast: DocumentNode,
@@ -256,6 +258,61 @@ function deduplicateSelections(
 
               currentSelection.selectionSet.selections =
                 inlineFragmentSelections;
+            }
+          }
+
+          let fragments: InlineFragmentNode[] = [];
+          let startIndex = -1;
+          for (let i = 0; i < parentSelectionSet.selections.length; i++) {
+            const selection = parentSelectionSet.selections[i];
+            if (
+              selection.kind !== Kind.INLINE_FRAGMENT ||
+              hasCustomDirective(selection.directives)
+            ) {
+              fragments = [];
+              startIndex = -1;
+              continue;
+            }
+
+            if (startIndex === -1) startIndex = i;
+            fragments.push(selection);
+            if (!fragmentsAreExhaustive(fragments, type, schema)) continue;
+
+            if (fragmentsContainEqualSelectionAt(fragments, "first")) {
+              const selection = fragments[0].selectionSet.selections[0];
+
+              for (let j = 0; j < fragments.length; j++) {
+                const fragment = fragments[j];
+                fragment.selectionSet.selections =
+                  fragment.selectionSet.selections.slice(1);
+              }
+
+              const parentSelections = [...parentSelectionSet.selections];
+              parentSelections.splice(startIndex, 0, selection);
+              parentSelectionSet.selections = parentSelections;
+
+              hasMadeChange = true;
+              break;
+            }
+
+            if (fragmentsContainEqualSelectionAt(fragments, "last")) {
+              const selection =
+                fragments[0].selectionSet.selections[
+                  fragments[0].selectionSet.selections.length - 1
+                ];
+
+              for (let j = 0; j < fragments.length; j++) {
+                const fragment = fragments[j];
+                fragment.selectionSet.selections =
+                  fragment.selectionSet.selections.slice(0, -1);
+              }
+
+              const parentSelections = [...parentSelectionSet.selections];
+              parentSelections.splice(i + 1, 0, selection);
+              parentSelectionSet.selections = parentSelections;
+
+              hasMadeChange = true;
+              break;
             }
           }
 
@@ -397,6 +454,69 @@ function selectionListIsLaggingRedundant(
   }
 
   return true;
+}
+
+function fragmentsContainEqualSelectionAt(
+  fragments: InlineFragmentNode[],
+  position: "first" | "last",
+): boolean {
+  const firstSelections = fragments[0].selectionSet.selections;
+  if (!firstSelections || firstSelections.length === 0) return false;
+
+  const expected =
+    firstSelections[position === "first" ? 0 : firstSelections.length - 1];
+
+  for (let i = 1; i < fragments.length; i++) {
+    const selections = fragments[i].selectionSet.selections;
+    if (!selections || selections.length === 0) return false;
+
+    const selection =
+      selections[position === "first" ? 0 : selections.length - 1];
+    if (!selectionsAreEqual(selection, expected)) return false;
+  }
+  return true;
+}
+
+function fragmentsAreExhaustive(
+  fragments: InlineFragmentNode[],
+  interfaceType: GraphQLInterfaceType,
+  schema: GraphQLSchema,
+): boolean {
+  const fragmentTypes = new Set<string>();
+  for (const fragment of fragments) {
+    const typeName = fragment.typeCondition?.name.value;
+    if (!typeName) continue;
+
+    const type = schema.getType(typeName);
+    if (isObjectType(type)) {
+      fragmentTypes.add(type.name);
+    } else if (isInterfaceType(type)) {
+      for (const t of implementors(type, schema)) fragmentTypes.add(t);
+    }
+  }
+
+  for (const implementor of implementors(interfaceType, schema)) {
+    if (!fragmentTypes.has(implementor)) return false;
+  }
+
+  return true;
+}
+
+function implementors(
+  interfaceType: GraphQLInterfaceType,
+  schema: GraphQLSchema,
+): Set<string> {
+  const { objects, interfaces } = schema.getImplementations(interfaceType);
+
+  const objectImplementors = new Set<string>(
+    objects.map((object) => object.name),
+  );
+
+  for (const i of interfaces) {
+    for (const t of implementors(i, schema)) objectImplementors.add(t);
+  }
+
+  return objectImplementors;
 }
 
 function hasCustomDirective(

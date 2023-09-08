@@ -1245,7 +1245,267 @@ describe("No Lagging Redundant Interface Selection List", () => {
   });
 });
 
-test.skip("No Repeated Interface Selections in Exhaustive Fragment List", () => {});
+describe("No Repeated Interface Selections in Exhaustive Fragment List", () => {
+  test("extracts a repeated field at the start of inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            handle
+            members {
+              name
+            }
+          }
+          ... on User {
+            handle
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("extracts a repeated field at the end of inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            members {
+              name
+            }
+            handle
+          }
+          ... on User {
+            name
+            handle
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+          handle
+        }
+      }"
+    `);
+  });
+
+  test("extracts a repeated field at the start and end of inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            __typename
+            members {
+              name
+            }
+            handle
+          }
+          ... on User {
+            __typename
+            name
+            handle
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          __typename
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+          handle
+        }
+      }"
+    `);
+  });
+
+  test("extracts a repeated field at the start of fragment spreads", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ...OrganizationData
+          ...UserData
+        }
+      }
+
+      fragment OrganizationData on Organization {
+        handle
+        members {
+          name
+        }
+      }
+
+      fragment UserData on User {
+        handle
+        name
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("extracts a repeated field with selection set at the start of inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            followers {
+              count
+            }
+            members {
+              name
+            }
+          }
+          ... on User {
+            followers {
+              count
+            }
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          followers {
+            count
+          }
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("extracts a repeated inline fragments at the start of inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            ... @custom {
+              handle
+            }
+            members {
+              name
+            }
+          }
+          ... on User {
+            ... @custom {
+              handle
+            }
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          ... @custom {
+            handle
+          }
+          ... on Organization {
+            members {
+              name
+            }
+          }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  describe("when there is a custom directive", () => {
+    test("does not extract a repeated field at the start of inline fragments", () => {
+      const source = /* GraphQL */ `
+        {
+          profile(id: 4) {
+            ... on Organization {
+              handle
+              members {
+                name
+              }
+            }
+            ... on User @custom {
+              handle
+              name
+            }
+          }
+        }
+      `;
+      expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+        "{
+          profile(id: 4) {
+            ... on Organization {
+              handle
+              members {
+                name
+              }
+            }
+            ... on User @custom {
+              handle
+              name
+            }
+          }
+        }"
+      `);
+    });
+  });
+});
 
 describe("No Constant @skip Directive", () => {
   test("reduces inline fragments without a type condidition", () => {
