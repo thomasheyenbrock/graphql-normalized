@@ -316,6 +316,14 @@ function deduplicateSelections(
             }
           }
 
+          parentSelectionSet.selections = [
+            ...parentSelectionSet.selections,
+          ].filter(
+            (selection) =>
+              selection.kind !== Kind.INLINE_FRAGMENT ||
+              selection.selectionSet.selections.length > 0,
+          );
+
           node = parentSelectionSet;
         } while (hasMadeChange);
 

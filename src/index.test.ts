@@ -845,6 +845,26 @@ describe("No Leading Redundant Interface Selections", () => {
     `);
   });
 
+  test("removes empty inline fragment", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          handle
+          ... on User {
+            handle
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
+        }
+      }"
+    `);
+  });
+
   describe("when there is a custom directive", () => {
     test("does not remove leading redundant field", () => {
       const source = /* GraphQL */ `
@@ -1022,6 +1042,26 @@ describe("No Lagging Redundant Interface Selections", () => {
           ... on User {
             name
           }
+        }
+      }"
+    `);
+  });
+
+  test("removes empty inline fragment", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            handle
+          }
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
         }
       }"
     `);
@@ -1208,6 +1248,29 @@ describe("No Lagging Redundant Interface Selection List", () => {
           ... @custom {
             handle
           }
+        }
+      }"
+    `);
+  });
+
+  test("removes empty inline fragment", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on User {
+            __typename
+            handle
+          }
+          __typename
+          handle
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          __typename
+          handle
         }
       }"
     `);
@@ -1461,6 +1524,32 @@ describe("No Repeated Interface Selections in Exhaustive Fragment List", () => {
               name
             }
           }
+          ... on User {
+            name
+          }
+        }
+      }"
+    `);
+  });
+
+  test("removes empty inline fragments", () => {
+    const source = /* GraphQL */ `
+      {
+        profile(id: 4) {
+          ... on Organization {
+            handle
+          }
+          ... on User {
+            handle
+            name
+          }
+        }
+      }
+    `;
+    expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+      "{
+        profile(id: 4) {
+          handle
           ... on User {
             name
           }
