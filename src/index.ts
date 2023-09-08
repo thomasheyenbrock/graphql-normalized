@@ -1,4 +1,5 @@
 import {
+  DirectiveNode,
   DocumentNode,
   FieldNode,
   FragmentDefinitionNode,
@@ -15,6 +16,7 @@ import {
   isInterfaceType,
   parse,
   print,
+  specifiedDirectives,
   visit,
   visitWithTypeInfo,
 } from "graphql";
@@ -196,7 +198,10 @@ function deduplicateSelections(
 
           for (let i = 0; i < parentSelectionSet.selections.length; i++) {
             const currentSelection = parentSelectionSet.selections[i];
-            if (currentSelection.kind === Kind.INLINE_FRAGMENT) {
+            if (
+              currentSelection.kind === Kind.INLINE_FRAGMENT &&
+              !hasCustomDirective(currentSelection.directives)
+            ) {
               const inlineFragmentSelections: SelectionNode[] = [];
               for (
                 let j = 0;
@@ -393,3 +398,15 @@ function selectionListIsLaggingRedundant(
 
   return true;
 }
+
+function hasCustomDirective(
+  directives: readonly DirectiveNode[] | undefined = [],
+): boolean {
+  return directives.some(
+    (directive) => !SPECIFIED_DIRECTIVE_NAMES.includes(directive.name.value),
+  );
+}
+
+const SPECIFIED_DIRECTIVE_NAMES = specifiedDirectives.map(
+  (directive) => directive.name,
+);

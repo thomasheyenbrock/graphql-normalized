@@ -844,6 +844,33 @@ describe("No Leading Redundant Interface Selections", () => {
       }"
     `);
   });
+
+  describe("when there is a custom directive", () => {
+    test("does not remove leading redundant field", () => {
+      const source = /* GraphQL */ `
+        {
+          profile(id: 4) {
+            handle
+            ... on User @custom {
+              handle
+              name
+            }
+          }
+        }
+      `;
+      expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+        "{
+          profile(id: 4) {
+            handle
+            ... on User @custom {
+              handle
+              name
+            }
+          }
+        }"
+      `);
+    });
+  });
 });
 
 describe("No Lagging Redundant Interface Selections", () => {
@@ -998,6 +1025,37 @@ describe("No Lagging Redundant Interface Selections", () => {
         }
       }"
     `);
+  });
+
+  describe("when there is a custom directive", () => {
+    test("does not remove a lagging redundant field", () => {
+      const source = /* GraphQL */ `
+        {
+          profile(id: 4) {
+            ... on User @custom {
+              handle
+              friends {
+                name
+              }
+            }
+            handle
+          }
+        }
+      `;
+      expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+        "{
+          profile(id: 4) {
+            ... on User @custom {
+              handle
+              friends {
+                name
+              }
+            }
+            handle
+          }
+        }"
+      `);
+    });
   });
 });
 
@@ -1154,6 +1212,37 @@ describe("No Lagging Redundant Interface Selection List", () => {
       }"
     `);
   });
+
+  describe("when there is a custom directive", () => {
+    test("does not remove a lagging redundant field list", () => {
+      const source = /* GraphQL */ `
+        {
+          profile(id: 4) {
+            ... on User @custom {
+              friends {
+                name
+              }
+              handle
+            }
+            handle
+          }
+        }
+      `;
+      expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+        "{
+          profile(id: 4) {
+            ... on User @custom {
+              friends {
+                name
+              }
+              handle
+            }
+            handle
+          }
+        }"
+      `);
+    });
+  });
 });
 
 test.skip("No Repeated Interface Selections in Exhaustive Fragment List", () => {});
@@ -1285,3 +1374,48 @@ test.skip("Ordered Variable Definitions", () => {});
 test.skip("Ordered Arguments", () => {});
 
 test.skip("Ordered Input Object Values", () => {});
+
+test.skip("combined #1", () => {
+  const source = /* GraphQL */ `
+    {
+      profile(id: 4) {
+        __typename
+        ... on User {
+          __typename
+          handle
+          name
+          followers {
+            count
+          }
+          ... @custom {
+            __typename
+          }
+        }
+        handle
+        followers {
+          count
+        }
+        ... @custom {
+          __typename
+        }
+      }
+    }
+  `;
+  expect(print(normalize(source, schema))).toMatchInlineSnapshot(`
+    "{
+      profile(id: 4) {
+        __typename
+        handle
+        ... on User {
+          name
+        }
+        ... @custom {
+          birthday
+        }
+        friends {
+          name
+        }
+      }
+    }"
+  `);
+});

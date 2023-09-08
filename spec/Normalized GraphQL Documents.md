@@ -586,7 +586,11 @@ _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_ defined
 inside a selection set of a parent field that returns an
 _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
 an equal selection is already defined in said selection set _somewhere before_
-the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_,
+and where no
+_[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
+is applied to the
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
 
 Formally, a selection is considered _leading redundant_ if
 {SelectionIsLeadingRedundant} returns **true**.
@@ -597,6 +601,9 @@ SelectionIsLeadingRedundant(selection) :
 1. Let {parentNode} be the node that contains {selectionSet}.
 1. If {parentNode} is not an
    _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. Let {directives} be the list of directives applied to {parentNode}.
+1. If {ContainsCustomDirective(directives)} is equal to **true**:
    - Return **false**.
 1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
 1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
@@ -609,6 +616,15 @@ SelectionIsLeadingRedundant(selection) :
    - Return **false**.
 1. For each {previousSelection} in {previousSelections}:
    - If {SelectionsAreEqual(selection, previousSelection)} is equal to **true**:
+     - Return **true**.
+1. Return **false**.
+
+ContainsCustomDirective(directives) :
+
+1. For each {directive} in {directives}:
+   - Let {name} be the name of {directive}.
+   - If {name} is not equal to **"skip"** and if {name} is not equal to
+     **"include"**:
      - Return **true**.
 1. Return **false**.
 
@@ -733,7 +749,11 @@ _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_ defined
 inside a selection set of a parent field that returns an
 _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
 an equal selection is already defined in said selection set _immediately after_
-the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
+the _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_,
+and where no
+_[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
+is applied to the
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_
 
 A lagging redundant selection should be replaced by only specifying the
 selection once _immediately before_ said
@@ -752,6 +772,8 @@ SelectionIsLaggingRedundant(selection) :
 1. Let {parentNode} be the node that contains {selectionSet}.
 1. If {parentNode} is not an
    _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. If {ContainsCustomDirective(directives)} is equal to **true**:
    - Return **false**.
 1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
 1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
@@ -803,6 +825,10 @@ inside a selection set of a parent field that returns an
 _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_, where
 an equal list of selections is already defined in said selection set
 _immediately after_ the
+_[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_, and
+where no
+_[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
+is applied to the
 _[InlineFragment](https://spec.graphql.org/October2021/#InlineFragment)_.
 
 Formally, a list of consecutive selections is considered _lagging redundant_ if
@@ -820,6 +846,8 @@ SelectionListIsLaggingRedundant(selections) :
 1. Let {parentNode} be the node that contains {selectionSet}.
 1. If {parentNode} is not an
    _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_:
+   - Return **false**.
+1. If {ContainsCustomDirective(directives)} is equal to **true**:
    - Return **false**.
 1. Let {parentSelectionSet} be the selection set that contains {parentNode}.
 1. Let {parentType} be the result of {TypeForSelectionSet(parentSelectionSet)}.
