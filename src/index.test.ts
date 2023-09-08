@@ -1635,7 +1635,7 @@ test.skip("Ordered Arguments", () => {});
 
 test.skip("Ordered Input Object Values", () => {});
 
-test.skip("combined #1", () => {
+test("combined #1", () => {
   const source = /* GraphQL */ `
     {
       profile(id: 4) {
@@ -1669,11 +1669,11 @@ test.skip("combined #1", () => {
         ... on User {
           name
         }
-        ... @custom {
-          birthday
+        followers {
+          count
         }
-        friends {
-          name
+        ... @custom {
+          __typename
         }
       }
     }"
