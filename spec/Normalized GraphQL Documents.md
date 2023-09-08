@@ -926,7 +926,6 @@ all of the following conditions hold:
     either has no type condition or the type from its type condition is equal to
     the given
     _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
-    _[interface type](https://spec.graphql.org/October2021/#sec-Interfaces)_.
 - All _[InlineFragments](https://spec.graphql.org/October2021/#InlineFragment)_
   do not have any
   _[custom directive](http://spec.graphql.org/October2021/#sec-Type-System.Directives.Custom-Directives)_
